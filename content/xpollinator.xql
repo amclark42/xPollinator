@@ -65,13 +65,14 @@ xquery version "3.1";
     let $badParamErr := xs:QName('err:FOXT0002')
     return
       if ( count(($node, $uri, $unparsed)) gt 1 ) then
-        error($badParamErr)
+        error($badParamErr, "The transformation map must contain one of 'stylesheet-node', 'stylesheet-location', or 'stylesheet-text'.")
       else if ( exists($unparsed) ) then
-        try {
-          parse-xml($unparsed)
-        } catch * {
-          error($badParamErr)
-        }
+        let $xsl :=
+          try { parse-xml($unparsed) } catch * { () }
+        return
+          if ( $unparsed eq '' or empty($xsl) ) then
+            error($badParamErr, "The stylesheet given in the transformation map is not XML.")
+          else $xsl
       else
         ($node, $uri)[1]
   };
