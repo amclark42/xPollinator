@@ -1,0 +1,10 @@
+<package xmlns="http://expath.org/ns/pkg" name="http://amclark42.net/xpollinator" 
+   abbrev="xpollinator" version="0.0.1" spec="1.0">
+  <title>xPollinator</title>
+  <!--<dependency processor="eXist-db"/>-->
+  
+  <xquery>
+    <namespace>http://amclark42.net/ns/xpollinator</namespace>
+    <file>xpollinator.xql</file>
+  </xquery>
+</package>
