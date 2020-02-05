@@ -2,12 +2,11 @@
 <meta xmlns="http://exist-db.org/xquery/repo">
   <description>xPollinator</description>
   <author>Ashley M. Clark</author>
-  <website/>
+  <!--<website/>-->
   <status>alpha</status>
   <license>MIT</license>
   <copyright>true</copyright>
   <type>library</type>
-  <target>xpollinator</target>
-  <prepare/>
-  <finish/>
+  <!--<prepare/>
+  <finish/>-->
 </meta>
