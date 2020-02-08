@@ -3,7 +3,7 @@ xquery version "3.1";
   (:declare boundary-space preserve;:)
 (:  LIBRARIES  :)
   import module namespace xpol="http://amclark42.net/ns/xpollinator"
-    at "xpollinator.xql";
+    at "file:/home/ashley/Documents/xPollinator/content/xpollinator.xql";
 (:  NAMESPACES  :)
   (:declare default element namespace "http://www.wwp.northeastern.edu/ns/textbase";:)
   declare namespace array="http://www.w3.org/2005/xpath-functions/array";
@@ -31,8 +31,8 @@ xquery version "3.1";
 
 let $xsl := "file:/home/ashley/Documents/Xplorator/resources/xsl/xmlViewer.xsl"
 let $doc := "file:/home/ashley/Documents/Xplorator/resources/xml/whyXPath.xml"
-let $xslText := 
-  '<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+let $xslText := unparsed-text($xsl)
+  (:'<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
     xmlns:tei="http://www.tei-c.org/ns/1.0"
     xmlns:wwp="http://www.wwp.northeastern.edu/ns/textbase"
     xmlns:xs="http://www.w3.org/2001/XMLSchema"
@@ -40,8 +40,7 @@ let $xslText :=
     xpath-default-namespace="http://www.tei-c.org/ns/1.0"
     exclude-result-prefixes="tei wwp xs"
     version="2.0">
-    
-  </xsl:stylesheet>'
+  </xsl:stylesheet>':)
 let $transformMap := map {
     'stylesheet-text': $xslText,
     'source-node': doc($doc)
