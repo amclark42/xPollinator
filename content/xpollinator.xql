@@ -15,7 +15,7 @@ xquery version "3.1";
 (:~
   xPollinator
   
-  @author Ashley M. Clark, Northeastern University Women Writers Project
+  @author Ashley M. Clark
   2020
  :)
  
@@ -36,44 +36,70 @@ xquery version "3.1";
   
   (: W3C spec, Saxon PE/EE :)
   declare function xpol:transform($options as map(*)) {
-    let $standard := function-lookup(xs:QName('fn:transform'), 1)
+    let $standardName := xs:QName('fn:transform')
+    let $standardFunction := function-lookup($standardName, 1)
     return
-      if ( exists($standard) ) then
-        $standard($options)
+      if ( exists($standardFunction) ) then
+        $standardFunction($options)
       else
-        let $input := $options?('source-node')
-        let $xsl := xpol:get-transform-stylesheet($options)
-        let $xslParams := $options?('stylesheet-params')
-        let $arity := 
-          if ( not(exists($xslParams)) ) then 2 else 3
+        let $hasParams := exists($options?('stylesheet-params'))
         let $fallbackMap := map {
-            QName('http://exist-db.org/xquery/transform', 'transform:transform'): map {
-                'arity': $arity
+            QName('http://exist-db.org/xquery/transform', 'transform'): map {
+                'arity': 3,
+                'xwalk': function($f, $opt-map) {
+                    let $src := $options?('source-node')
+                    let $input :=
+                      if ( empty($src) or not($src instance of node()) ) then
+                        error(xs:QName('err:FOXT0002'), 
+                          "The transformation map should include a document in 'source-node'.")
+                      else $src
+                    let $xsl := xpol:get-transform-stylesheet($options)
+                    let $paramMap := $options?('stylesheet-params')
+                    let $xslParams :=
+                      let $keys :=
+                        if ( $paramMap instance of map(*) ) then
+                          xpol:keys($paramMap)
+                        else ()
+                      return
+                        <parameters>
+                        {
+                          for $name in $keys
+                          return
+                            <param name="{$name}" value="{$paramMap?($name)}"/>
+                        }
+                        </parameters>
+                    return
+                      $f($input, $xsl, $xslParams)
+                  }
               },
-            QName('http://basex.org/modules/xslt', 'xslt:transform'): map {
-                'arity': $arity
+            QName('http://basex.org/modules/xslt', 'transform'): map {
+                'arity': if ( not($hasParams) ) then 2 else 3,
+                'xwalk': function($f, $opt-map) {
+                    let $input := $options?('source-node')
+                    let $xsl := xpol:get-transform-stylesheet($options)
+                    let $xslParams := $options?('stylesheet-params')
+                    return
+                      if ( not($hasParams) ) then
+                        $f($input, $xsl)
+                      else
+                        $f($input, $xsl, $xslParams)
+                  }
               }
           }
-        let $transform := xpol:get-fallback($fallbackMap)
+        let $transform := xpol:get-fallback($standardName, $fallbackMap)
         let $implementation :=
           $fallbackMap?(function-name($transform))
         let $result :=
-          if ( $arity eq 2 ) then
-            $transform($input, $xsl)
-          else
-            $transform($input, $xsl, $xslParams)
+          $implementation?('xwalk')($transform, $options)
         return map {
             'output': $result
           }
   };
-  (: eXist, BaseX arity 3 :)
-  (:declare function xpol:transform($input, $stylesheet, $parameters) {
-  };:)
 
 
 (:  SUPPORT FUNCTIONS  :)
   
-  declare %private function xpol:get-fallback($fallback-map as map(*)) {
+  declare %private function xpol:get-fallback($standard-function as xs:QName, $fallback-map as map(*)) {
     let $functions :=
       for $qName in xpol:keys($fallback-map)
       let $implMap := $fallback-map?($qName)
@@ -82,7 +108,7 @@ xquery version "3.1";
     return
       if ( count($functions) gt 0 ) then
         $functions[1]
-      else error(xs:QName('err:XPST0017'))
+      else error(xs:QName('err:XPST0017'), concat("Function '",$standard-function,"' not implemented"))
   };
   
   declare %private function xpol:get-transform-stylesheet($xsl-options as map(*)) as item() {
@@ -95,11 +121,12 @@ xquery version "3.1";
         error($badParamErr, "The transformation map must contain one of 'stylesheet-node', 'stylesheet-location', or 'stylesheet-text'.")
       else if ( exists($unparsed) ) then
         let $xsl :=
-          try { parse-xml($unparsed) } catch * { () }
+          try { parse-xml($unparsed) } catch * { '' }
         return
-          if ( $unparsed eq '' or empty($xsl) ) then
+          if ( $unparsed eq '' ) then
             error($badParamErr, "The stylesheet given in the transformation map is not XML.")
           else $xsl
-      else
-        ($node, $uri)[1]
+      else if ( exists($uri) ) then
+        doc($uri)
+      else $node
   };
