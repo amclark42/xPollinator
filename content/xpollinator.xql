@@ -43,16 +43,19 @@ xquery version "3.1";
         $standardFunction($options)
       else
         let $hasParams := exists($options?('stylesheet-params'))
+        let $getInput := function($opt-map as map(*)) {
+            let $src := $options?('source-node')
+            return
+              if ( empty($src) or not($src instance of node()) ) then
+                error(xs:QName('err:FOXT0002'), 
+                  "The transformation map should include a document in 'source-node'.")
+              else $src
+          }
         let $fallbackMap := map {
             QName('http://exist-db.org/xquery/transform', 'transform'): map {
                 'arity': 3,
                 'xwalk': function($f, $opt-map) {
-                    let $src := $options?('source-node')
-                    let $input :=
-                      if ( empty($src) or not($src instance of node()) ) then
-                        error(xs:QName('err:FOXT0002'), 
-                          "The transformation map should include a document in 'source-node'.")
-                      else $src
+                    let $input := $getInput($opt-map)
                     let $xsl := xpol:get-transform-stylesheet($options)
                     let $paramMap := $options?('stylesheet-params')
                     let $xslParams :=
@@ -75,7 +78,7 @@ xquery version "3.1";
             QName('http://basex.org/modules/xslt', 'transform'): map {
                 'arity': if ( not($hasParams) ) then 2 else 3,
                 'xwalk': function($f, $opt-map) {
-                    let $input := $options?('source-node')
+                    let $input := $getInput($opt-map)
                     let $xsl := xpol:get-transform-stylesheet($options)
                     let $xslParams := $options?('stylesheet-params')
                     return
@@ -108,7 +111,8 @@ xquery version "3.1";
     return
       if ( count($functions) gt 0 ) then
         $functions[1]
-      else error(xs:QName('err:XPST0017'), concat("Function '",$standard-function,"' not implemented"))
+      else
+        error(xs:QName('err:XPST0017'), concat("Function '",$standard-function,"' not implemented"))
   };
   
   declare %private function xpol:get-transform-stylesheet($xsl-options as map(*)) as item() {
